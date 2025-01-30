@@ -1,0 +1,59 @@
+import vk_api
+import time
+from vk_api.utils import get_random_id
+
+GROUP_TOKEN = 'vk1.a.Bq0h4sDn2-zVCnL6Aw6UoNLwaKUHtoWIJ9ZIZDR9Rx-KXpJrkGHTjnLHgrWr1Rfq4Vup49Rm4CzWplED5ftLvNgLqAFyJDjOCM3J9ULUjFhWFfR025tu3bOz_02Z99D35AypxJl0G8PuJ7dmeINoX9IHkLwvClaOSV8UxHZTjPft5SitkN1KQHvFUNv7EM7E7pm0G15Efc0VkGAlUF71dQ'
+GROUP_ID = '229207734'
+
+vk_session = vk_api.VkApi(token=GROUP_TOKEN, api_version='5.199')
+vk = vk_session.get_api()
+
+def send_message(user_id, message):
+    vk.messages.send(
+        user_id=user_id,
+        message=message,
+        random_id=get_random_id()
+    )
+
+def send_image(user_id, image_url):
+    vk.messages.send(
+        user_id=user_id,
+        attachment=image_url,
+        random_id=get_random_id()
+    )
+
+def process_message(message):
+    user_id = message['from_id']
+    text = message.get('text', '').lower()
+    attachments = message.get('attachments', [])
+
+    if text == 'start':
+        send_message(user_id, "Welcome! Send me an image.")
+    elif attachments and attachments[0]['type'] == 'photo':
+        photo = attachments[0]['photo']
+        image_url = f"photo{photo['owner_id']}_{photo['id']}_{photo['access_key']}"
+        send_image(user_id, image_url)
+    else:
+        pass
+
+last_timestamp = 0
+while True:
+    try:
+        response = vk.messages.get(
+            count=10,
+            time_offset=10,
+            filter=8,
+            peer_id=GROUP_ID 
+        )
+        
+        if 'items' in response:
+            for msg in response['items']:
+                if msg['date'] > last_timestamp:
+                    process_message(msg)
+                    last_timestamp = msg['date']
+        
+        time.sleep(3)
+    
+    except Exception as e:
+        print(f"Error: {e}")
+        time.sleep(10)
